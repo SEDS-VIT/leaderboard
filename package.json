@@ -12,11 +12,16 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@libsql/client": "^0.18.0",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-devtools": "latest",
     "@tanstack/react-router": "latest",
     "@tanstack/react-router-devtools": "latest",
     "@tanstack/react-start": "latest",
+    "@tursodatabase/database": "^0.7.2",
+    "better-auth": "^1.7.3",
+    "dotenv": "^17.4.2",
+    "drizzle-orm": "^1.0.0-rc.4",
     "nitro": "3.0.260610-beta",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -29,6 +34,7 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^6.0.1",
+    "drizzle-kit": "^1.0.0-rc.4",
     "typescript": "^6.0.2",
     "vite": "^8.0.0"
   },
@@ -37,5 +43,12 @@
       "esbuild",
       "lightningcss"
     ]
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "npm",
+      "version": "12.0.2",
+      "onFail": "download"
+    }
   }
 }

@@ -1,0 +1,11 @@
+# Turso DB with Drizzle
+TURSO_DATABASE_URL=""
+TURSO_AUTH_TOKEN=""
+
+# Better Auth
+BETTER_AUTH_SECRET="Some_Secret"
+BETTER_AUTH_URL="http://localhost:3000"
+
+# Google Client
+GOOGLE_CLIENT_ID=""
+GOOGLE_CLIENT_SECRET=""

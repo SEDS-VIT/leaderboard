@@ -1,4 +1,28 @@
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import {v7 as uuidv7} from "uuid"
+
+export const reason = sqliteTable("reason", {
+    id: text("id").primaryKey().$defaultFn(() => uuidv7()),
+    reason: text("reason").default("").notNull(),
+    points: integer("points").default(0).notNull()
+})
+
+export const attendance = sqliteTable("attendance", {
+    id: text("id").primaryKey().$defaultFn(() => uuidv7()),
+    userId: text("user_id").references(() => user.id),
+    revoked: integer("revoked", {mode: "boolean"}).default(false),
+    date: integer("date", { mode: 'timestamp' }).notNull()
+})
+
+export const pointLog = sqliteTable("point_log", {
+    id: text("id").primaryKey().$defaultFn(() => uuidv7()),
+    fromUser: text("from_user").references(() => user.id),
+    toUser: text("to_user").references(() => user.id),
+    reason: text("reason").notNull().default("adjustment"),
+    details: text("details").default(""),
+    verified: integer("verified", {mode: "boolean"}).default(false),
+    points: integer("points").default(0).notNull()
+})
 
 export const user = sqliteTable("user", {
     id: text("id").primaryKey(),
@@ -12,7 +36,8 @@ export const user = sqliteTable("user", {
     registrationNumber: text("registration_number"),
     year: integer("year"),
     accessLevel: integer("access_level").default(0),
-    isBanned: integer({mode: "boolean"}).default(false)
+    points: integer("points").default(0),
+    isBanned: integer("is_banned", {mode: "boolean"}).default(false)
 });
 
 export const session = sqliteTable("session", {

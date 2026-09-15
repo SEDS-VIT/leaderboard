@@ -14,7 +14,7 @@ function IndexPage() {
             callbackURL: "/profile",
             additionalParams: {
                 hd: "vitstudent.ac.in",
-                prompt: "select_account", // <-- Add this line
+                prompt: "select_account",
             },
         });
     };

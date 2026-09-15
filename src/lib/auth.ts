@@ -14,12 +14,13 @@ export const auth = betterAuth({
         google: {
             clientId: process.env.GOOGLE_CLIENT_ID!,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET!
-            // hd: "vitstudent.ac.in"        
+            // hd: "vitstudent.ac.in"
         },
     },
     user: {
         // ✅ Intercept the user login/registration to enforce your custom logic
         validateUserInfo: ({ user, source }) => {
+            source
             const allowedDomain = "@vitstudent.ac.in";
             const adminEmail = "iamsurjog@gmail.com"; // Add your specific admin email here
             

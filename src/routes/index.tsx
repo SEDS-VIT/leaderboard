@@ -11,7 +11,7 @@ function IndexPage() {
     const handleLogin = async () => {
         await authClient.signIn.social({
             provider: "google",
-            callbackURL: "/profile",
+            callbackURL: "/home",
             additionalParams: {
                 hd: "vitstudent.ac.in",
                 prompt: "select_account",

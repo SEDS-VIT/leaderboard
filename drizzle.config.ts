@@ -5,7 +5,7 @@ export default defineConfig({
   out: "./drizzle", // Where migrations will be generated
   dialect: "turso", // <-- This is the missing property
   dbCredentials: {
-    url: process.env.VITE_TURSO_DATABASE_URL!,
-    authToken: process.env.VITE_TURSO_AUTH_TOKEN,
+    url: import.meta.env.VITE_TURSO_DATABASE_URL!,
+    authToken: import.meta.env.VITE_TURSO_AUTH_TOKEN,
   },
 });

@@ -33,6 +33,31 @@ export const auth = betterAuth({
                 });
             }
         },
+        additionalFields: {
+            fullName: {
+                type: "string",
+                input: false
+            },
+            registrationNumber: {
+                type: "string",
+                input: false
+            },
+            accessLevel: {
+                type: "number",
+                defaultValue: 0,
+                input: false
+            },
+            points: {
+                type: "number",
+                defaultValue: 0,
+                input: false
+            },
+            isBanned: {
+                type: "boolean",
+                defaultValue: false,
+                input: false
+            }
+        }
     },
     databaseHooks: {
         user: {

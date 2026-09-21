@@ -7,12 +7,12 @@ import { createServerFn } from '@tanstack/react-start'
 import { and, ne, lt, eq } from 'drizzle-orm'
 
 const changePoints = createServerFn({ method: 'POST' })
-.validator((data: {userId: string, reason: string, description: string, points: number}) => data)
+    .validator((data: { userId: string, reason: string, description: string, points: number }) => data)
     .handler(async ({ data }) => {
         const session = await getSession()
-        const [ targetLevel ] = await db.select({level: user.accessLevel}).from(user).where(eq(user.id, data.userId))
-        if ( ( targetLevel?.level ?? 5 ) < ( session?.user.accessLevel ?? 0 )){
-            db.insert(pointLog).values({fromUser: session?.user.id, toUser: data.userId, reason: data.reason, details: data.description, points: data.points})
+        const [targetLevel] = await db.select({ level: user.accessLevel }).from(user).where(eq(user.id, data.userId))
+        if ((targetLevel?.level ?? 5) < (session?.user.accessLevel ?? 0)) {
+            db.insert(pointLog).values({ fromUser: session?.user.id, toUser: data.userId, reason: data.reason, details: data.description, points: data.points, verified: false })
         }
     })
 
@@ -38,18 +38,17 @@ const getPoints = createServerFn({ method: 'GET' })
 
 export const Route = createFileRoute('/_protected/points')({
     beforeLoad: requireAccess(1),
-    loader: async () => {
-        const reasons = await getReason();
-        return { reasons }
-    },
     component: RouteComponent,
 })
 
 //TODO: Add/remove points
 function RouteComponent() {
     const queryClient = useQueryClient()
-    const reasons = Route.useLoaderData()
-    useMutation({
+    const reasons = useQuery({
+        queryKey: ['reasons'],
+        queryFn: getReason,
+    })
+    const updatePoints = useMutation({
         mutationFn: changePoints,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['points'] })
@@ -57,7 +56,7 @@ function RouteComponent() {
     })
     const points = useQuery({
         queryKey: ['points'],
-        queryFn: () => getPoints(),
+        queryFn: getPoints
     })
     return <div>
         <div>

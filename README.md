@@ -1,197 +1,161 @@
-Welcome to your new TanStack Start app!
+# 🚀 SEDS VIT Leaderboard
 
-# Getting Started
+The internal gamified point platform for the **SEDS VIT** chapter. Members earn (or lose)
+points for their contributions, and a strict role hierarchy governs who can award, verify,
+audit and override them — all wrapped in a dark, space-themed UI.
 
-To run this application:
+Built with **TanStack Start + React 19**, **Tailwind CSS v4 + shadcn/ui**, **better-auth**
+(Google OAuth), **Drizzle ORM** and a **Turso (libSQL)** database.
+
+---
+
+## ✨ Features
+
+- **Google sign-in**, restricted to `@vitstudent.ac.in` accounts
+- **Leaderboard** with All / Senior Core / Junior Core views and rank medals
+- **Point assignment & docking** with a predefined (but editable) reason list
+- **Approval pipeline**: Senior Core proposals wait in a Board verification queue
+- **Full audit ledger** for HR & Chair (who gave what to whom, and who approved it)
+- **Member management**: roles, bans, and bulk JC → SC promotions
+- **Chair console** with direct point overrides
+- Dark, space-themed design: nebula palette, animated starfield, glassy panels
+
+## 👥 Roles
+
+| Level | Role        | Capabilities |
+| ----- | ----------- | ------------ |
+| `-1`  | Alumni      | Hidden from the platform |
+| `0`   | Junior Core | View own points & breakdown; on the leaderboard |
+| `1`   | Senior Core | Propose points for JC members (needs Board verification) |
+| `2`   | Board       | Verify/approve the queue; award points to JC & SC immediately; exempt from the leaderboard |
+| `3`   | HR          | Everything above + full ledger, member/role/ban management, reason management, bulk promotions |
+| `4`   | Chair       | Everything above + direct point overrides from the Chair console |
+
+Privacy rule: SC & JC members see **only their own** totals and breakdown — never who
+assigned their points. HR & Chair see the complete ledger.
+
+## 🔄 Point workflow
+
+1. An SC (or higher) picks a member, a reason and a point value.
+   Reasons from the dropdown are **suggestions** — the value is always editable, and
+   "Other (custom)" allows a free-text reason.
+2. If the actor is SC (`level 1`), the entry is stored as **Pending Verification**.
+3. A Board member reviews the queue and approves or rejects it.
+4. On approval the points are applied to the recipient and the ledger records
+   `initiator → recipient → verifier` for the HR/Chair transparency view.
+   Board/HR/Chair actions apply immediately.
+
+## 🧰 Getting started
+
+### Prerequisites
+
+- Node.js 20+
+- A [Turso](https://turso.tech) database
+- A Google OAuth client (authorized redirect: `http://localhost:3000/api/auth/callback/google`)
+
+### 1. Install
 
 ```bash
 npm install
+```
+
+### 2. Configure environment
+
+```bash
+cp .exampleenv .env
+```
+
+| Variable                  | Purpose |
+| ------------------------- | ------- |
+| `VITE_TURSO_DATABASE_URL` | Turso database URL (`libsql://…`) |
+| `VITE_TURSO_AUTH_TOKEN`   | Turso auth token |
+| `BETTER_AUTH_SECRET`      | Session secret (use `npx auth secret`, 32+ chars) |
+| `BETTER_AUTH_URL`         | App URL, e.g. `http://localhost:3000` |
+| `GOOGLE_CLIENT_ID`        | Google OAuth client id |
+| `GOOGLE_CLIENT_SECRET`    | Google OAuth client secret |
+
+### 3. Create the schema
+
+```bash
+npx drizzle-kit push
+```
+
+### 4. Run
+
+```bash
 npm run dev
 ```
 
-# Building For Production
+Open <http://localhost:3000>. The **first Chair must be set manually** in the database
+(`UPDATE user SET accessLevel = 4 WHERE email = '…'`); the Chair then assigns every
+other role from **Manage → Users**.
 
-To build this application for production:
+## 📜 Scripts
+
+| Command                 | Description |
+| ----------------------- | ----------- |
+| `npm run dev`           | Dev server on port 3000 |
+| `npm run build`         | Production build (Nitro output in `.output/`) |
+| `npm run preview`       | Preview the production build |
+| `npm run generate-routes` | Regenerate the TanStack Router route tree |
+| `npx drizzle-kit push`  | Sync the Drizzle schema to Turso |
+
+## 🗂 Project structure
+
+```
+src/
+├── components/
+│   ├── app-shell.tsx        # Sidebar / mobile nav, role-gated links
+│   ├── starfield.tsx        # Fixed nebula + star layers behind every page
+│   └── ui/                  # shadcn/ui components (Base UI primitives)
+├── db/
+│   ├── index.ts             # Drizzle + Turso client
+│   └── schema.ts            # user, point_log, reason, attendance + auth tables
+├── lib/
+│   ├── auth.ts              # better-auth server config (Google, domain check, hooks)
+│   ├── auth-client.ts       # better-auth browser client
+│   ├── auth.functions.ts    # getSession + requireAccess(minLevel) route guard
+│   └── roles.ts             # Role levels, labels, helpers
+└── routes/
+    ├── __root.tsx           # HTML shell, dark mode, starfield, toaster
+    ├── index.tsx            # Sign-in landing page
+    ├── profile.tsx          # Own profile
+    ├── banned.tsx           # Ban notice
+    ├── api/auth/$.ts        # better-auth HTTP handler
+    ├── _protected.tsx       # Auth guard + app shell layout
+    └── _protected/
+        ├── home.tsx         # Leaderboard
+        ├── logs.tsx         # My points history
+        ├── points.tsx       # Grant / dock points (SC+)
+        ├── pointVerify.tsx  # Verification queue (Board+)
+        ├── trueLogs.tsx     # Full audit ledger (HR+)
+        ├── hrDashboard.tsx  # Members, roles, bans, reasons, JC→SC bulk promote (HR+)
+        └── sudo.tsx         # Chair console (Chair)
+```
+
+## 🛠 Development notes
+
+- **Server functions** (`createServerFn`) are the API layer — pages import them directly
+  and call them through TanStack Query. Every function re-checks the session and
+  `accessLevel` server-side; never trust the client.
+- **Route guards**: `requireAccess(n)` in each route's `beforeLoad`, plus the
+  `_protected` layout guard (session + ban check).
+- **Theme**: all colors are CSS variables in `src/styles.css` (Tailwind v4, CSS-first).
+  The app is dark-only (`class="dark"` on `<html>`); the starfield lives in
+  `src/components/starfield.tsx`.
+- **point_log.verified** is tri-state: `null` = pending, `true` = approved,
+  `false` = rejected.
+- **shadcn/ui**: add components with `npx shadcn@latest add <component>`
+  (style `base-vega`, Base UI primitives — use `render={<X/>}` instead of `asChild`).
+
+## 🚢 Production
 
 ```bash
 npm run build
+node .output/server/index.mjs
 ```
 
-## Styling
-
-This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
-
-### Removing Tailwind CSS
-
-If you prefer not to use Tailwind CSS:
-
-1. Remove the demo pages in `src/routes/demo/`
-2. Replace the Tailwind import in `src/styles.css` with your own styles
-3. Remove `tailwindcss()` from the plugins array in `vite.config.ts`
-4. Remove `@tailwindcss/vite` and `tailwindcss` from `package.json`
-
-
-## Deploy with Nitro
-
-This project uses Nitro as a generic server adapter, so it can run on any Node-compatible host.
-
-```bash
-npm run build
-node dist/server/index.mjs
-```
-
-The build output is a self-contained Node server. To deploy, push the `dist/` directory to your host (Render, Fly.io, your own VPS, etc.) and run the server command above.
-
-For host-specific presets (Vercel, Netlify, Cloudflare, AWS Lambda, etc.) and tuning, see https://v3.nitro.build/deploy.
-
-
-
-## Routing
-
-This project uses [TanStack Router](https://tanstack.com/router) with file-based routing. Routes are managed as files in `src/routes`.
-
-### Adding A Route
-
-To add a new route to your application just add a new file in the `./src/routes` directory.
-
-TanStack will automatically generate the content of the route file for you.
-
-Now that you have two routes you can use a `Link` component to navigate between them.
-
-### Adding Links
-
-To use SPA (Single Page Application) navigation you will need to import the `Link` component from `@tanstack/react-router`.
-
-```tsx
-import { Link } from "@tanstack/react-router";
-```
-
-Then anywhere in your JSX you can use it like so:
-
-```tsx
-<Link to="/about">About</Link>
-```
-
-This will create a link that will navigate to the `/about` route.
-
-More information on the `Link` component can be found in the [Link documentation](https://tanstack.com/router/v1/docs/framework/react/api/router/linkComponent).
-
-### Using A Layout
-
-In the File Based Routing setup the layout is located in `src/routes/__root.tsx`. Anything you add to the root route will appear in all the routes. The route content will appear in the JSX where you render `{children}` in the `shellComponent`.
-
-Here is an example layout that includes a header:
-
-```tsx
-import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
-
-export const Route = createRootRoute({
-  head: () => ({
-    meta: [
-      { charSet: 'utf-8' },
-      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'My App' },
-    ],
-  }),
-  shellComponent: ({ children }) => (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        <header>
-          <nav>
-            <Link to="/">Home</Link>
-            <Link to="/about">About</Link>
-          </nav>
-        </header>
-        {children}
-        <Scripts />
-      </body>
-    </html>
-  ),
-})
-```
-
-More information on layouts can be found in the [Layouts documentation](https://tanstack.com/router/latest/docs/framework/react/guide/routing-concepts#layouts).
-
-## Server Functions
-
-TanStack Start provides server functions that allow you to write server-side code that seamlessly integrates with your client components.
-
-```tsx
-import { createServerFn } from '@tanstack/react-start'
-
-const getServerTime = createServerFn({
-  method: 'GET',
-}).handler(async () => {
-  return new Date().toISOString()
-})
-
-// Use in a component
-function MyComponent() {
-  const [time, setTime] = useState('')
-  
-  useEffect(() => {
-    getServerTime().then(setTime)
-  }, [])
-  
-  return <div>Server time: {time}</div>
-}
-```
-
-## API Routes
-
-You can create API routes by using the `server` property in your route definitions:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
-
-export const Route = createFileRoute('/api/hello')({
-  server: {
-    handlers: {
-      GET: () => json({ message: 'Hello, World!' }),
-    },
-  },
-})
-```
-
-## Data Fetching
-
-There are multiple ways to fetch data in your application. You can use TanStack Query to fetch data from a server. But you can also use the `loader` functionality built into TanStack Router to load the data for a route before it's rendered.
-
-For example:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-
-export const Route = createFileRoute('/people')({
-  loader: async () => {
-    const response = await fetch('https://swapi.dev/api/people')
-    return response.json()
-  },
-  component: PeopleComponent,
-})
-
-function PeopleComponent() {
-  const data = Route.useLoaderData()
-  return (
-    <ul>
-      {data.results.map((person) => (
-        <li key={person.name}>{person.name}</li>
-      ))}
-    </ul>
-  )
-}
-```
-
-Loaders simplify your data fetching logic dramatically. Check out more information in the [Loader documentation](https://tanstack.com/router/latest/docs/framework/react/guide/data-loading#loader-parameters).
-
-
-
-# Learn More
-
-You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).
-
-For TanStack Start specific documentation, visit [TanStack Start](https://tanstack.com/start).
+The build is a self-contained Nitro Node server — deploy `.output/` to any
+Node-compatible host (Render, Fly.io, a VPS, …). See <https://v3.nitro.build/deploy>
+for host-specific presets. Remember to set all environment variables (and a strong
+`BETTER_AUTH_SECRET`) on the host.

@@ -23,10 +23,12 @@ export const auth = betterAuth({
         validateUserInfo: ({ user, source }) => {
             source
             const allowedDomain = "@vitstudent.ac.in";
-            const adminEmail = "iamsurjog@gmail.com"; // Add your specific admin email here
+            const adminEmail = "seds@vit.ac.in"; 
+            //TODO: remove this after testing
+            const testingEmail = "iamsurjog@gmail.com"; 
 
             // Validate the email domain OR check if it's the exact admin email
-            if (!user.email?.endsWith(allowedDomain) && user.email !== adminEmail) {
+            if (!user.email?.endsWith(allowedDomain) && user.email !== adminEmail && user.email !== testingEmail) {
                 // Reject unauthorized users
                 throw new APIError("FORBIDDEN", {
                     message: "Only university accounts and authorized admins are allowed to sign in.",

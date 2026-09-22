@@ -2,6 +2,8 @@ import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
+import { Toaster } from '@/components/ui/sonner'
+import { Starfield } from '@/components/starfield'
 
 import appCss from '../styles.css?url'
 
@@ -16,10 +18,14 @@ export const Route = createRootRoute({
                 content: 'width=device-width, initial-scale=1',
             },
             {
-                title: 'TanStack Start Starter',
+                title: 'SEDS VIT Leaderboard',
             },
         ],
         links: [
+            {
+                rel: 'icon',
+                href: '/favicon.ico',
+            },
             {
                 rel: 'stylesheet',
                 href: appCss,
@@ -31,12 +37,14 @@ export const Route = createRootRoute({
 
 function RootDocument({ children }: { children: React.ReactNode }) {
     return (
-        <html lang="en">
+        <html lang="en" className="dark" style={{ colorScheme: 'dark' }}>
             <head>
                 <HeadContent />
             </head>
             <body>
+                <Starfield />
                 {children}
+                <Toaster position="top-center" richColors />
                 <TanStackDevtools
                     config={{
                         position: 'bottom-right',

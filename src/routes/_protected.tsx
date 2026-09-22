@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
 import { getSession } from "@/lib/auth.functions"
+import { AppShell } from '@/components/app-shell'
 
 export const Route = createFileRoute('/_protected')({
     beforeLoad: async () => {
@@ -17,7 +18,10 @@ export const Route = createFileRoute('/_protected')({
 })
 
 function RouteComponent() {
-    return <div>
-        <Outlet />
-    </div>
+    const { user } = Route.useRouteContext()
+    return (
+        <AppShell user={user}>
+            <Outlet />
+        </AppShell>
+    )
 }

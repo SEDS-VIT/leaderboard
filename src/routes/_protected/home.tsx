@@ -3,7 +3,7 @@ import { user } from '#/db/schema'
 import { createFileRoute } from "@tanstack/react-router";
 import { getSession, requireAccess } from '#/lib/auth.functions'
 import { createServerFn } from '@tanstack/react-start'
-import { and, asc, desc, gt, lt } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, lt } from 'drizzle-orm';
 import { useQuery } from '@tanstack/react-query';
 import { Award, Crown, Medal, Trophy } from 'lucide-react';
 import { initials, roleLabel } from '@/lib/roles';
@@ -27,6 +27,9 @@ const getLeaderboard = createServerFn({ method: 'GET' })
     .handler(async (): Promise<LeaderboardEntry[]> => {
         const session = await getSession()
         if (!session) return []
+        const myLevel = session.user.accessLevel ?? 0
+        // Junior Core (accessLevel 0) only sees the Junior Core leaderboard.
+        // Senior Core, Board, HR and Chair (accessLevel > 0) see both SC and JC.
         // Board, HR and Chair are exempt from the point system (accessLevel >= 2),
         // and hidden accounts (accessLevel -1) never appear.
         return await db
@@ -39,7 +42,11 @@ const getLeaderboard = createServerFn({ method: 'GET' })
                 level: user.accessLevel,
             })
             .from(user)
-            .where(and(gt(user.accessLevel, -1), lt(user.accessLevel, 2)))
+            .where(
+                myLevel > 0
+                    ? and(gt(user.accessLevel, -1), lt(user.accessLevel, 2))
+                    : eq(user.accessLevel, 0),
+            )
             .orderBy(desc(user.points), asc(user.fullName))
     })
 
@@ -64,12 +71,17 @@ function RouteComponent() {
     })
 
     const rows = leaderboard.data ?? []
-    const myIndex = rows.findIndex((r) => r.id === me.id)
-    const myRank = myIndex >= 0 ? myIndex + 1 : null
-    const myPoints = rows[myIndex]?.points ?? me.points ?? 0
+    const myLevel = me.accessLevel ?? 0
+    const canSeeBoth = myLevel > 0
 
     const sc = rows.filter((r) => (r.level ?? 0) >= 1)
     const jc = rows.filter((r) => (r.level ?? 0) < 1)
+
+    // Rank is computed within my own group only.
+    const myGroup = myLevel >= 1 ? sc : jc
+    const myIndex = myGroup.findIndex((r) => r.id === me.id)
+    const myRank = myIndex >= 0 ? myIndex + 1 : null
+    const myPoints = myGroup[myIndex]?.points ?? me.points ?? 0
 
     const renderTable = (entries: LeaderboardEntry[], offset = 0) => (
         <Table>
@@ -130,7 +142,9 @@ function RouteComponent() {
             <div className="flex flex-col gap-1">
                 <h1 className="font-heading text-2xl font-semibold tracking-tight">Leaderboard</h1>
                 <p className="text-sm text-muted-foreground">
-                    Points for Junior and Senior Core members. Board, HR and Chair are exempt from tracking.
+                    {canSeeBoth
+                        ? 'Points for Junior and Senior Core members. Board, HR and Chair are exempt from tracking.'
+                        : 'Points for Junior Core members.'}
                 </p>
             </div>
 
@@ -160,13 +174,14 @@ function RouteComponent() {
                 </Card>
             </div>
 
-            <Tabs defaultValue="all">
-                <TabsList>
-                    <TabsTrigger value="all">All</TabsTrigger>
-                    <TabsTrigger value="sc">Senior Core</TabsTrigger>
-                    <TabsTrigger value="jc">Junior Core</TabsTrigger>
-                </TabsList>
-                <Card className="mt-3">
+            <Tabs defaultValue={canSeeBoth ? 'sc' : 'jc'}>
+                {canSeeBoth && (
+                    <TabsList>
+                        <TabsTrigger value="sc">Senior Core</TabsTrigger>
+                        <TabsTrigger value="jc">Junior Core</TabsTrigger>
+                    </TabsList>
+                )}
+                <Card className={canSeeBoth ? 'mt-3' : undefined}>
                     <CardContent className="p-0">
                         {leaderboard.isLoading ? (
                             <div className="flex flex-col gap-3 p-4">
@@ -180,9 +195,6 @@ function RouteComponent() {
                             </div>
                         ) : (
                             <>
-                                <TabsContent value="all" className="m-0">
-                                    {renderTable(rows)}
-                                </TabsContent>
                                 <TabsContent value="sc" className="m-0">
                                     {renderTable(sc)}
                                 </TabsContent>

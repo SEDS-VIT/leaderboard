@@ -1,6 +1,35 @@
+import { db } from '#/db'
+import { user } from '#/db/schema'
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { requireAccess } from '#/lib/auth.functions'
+import { getSession, requireAccess } from '#/lib/auth.functions'
 import { authClient } from "@/lib/auth-client";
+import { createServerFn } from '@tanstack/react-start'
+import { eq, or } from 'drizzle-orm';
+import { useQuery } from '@tanstack/react-query';
+
+
+const getPoints = createServerFn()
+    .handler(async () => {
+        const session = await getSession();
+        if ((session?.user.accessLevel ?? 0) > 0) {
+            const response = await db
+                .select({ name: user.fullName, points: user.points, level: user.accessLevel })
+                .from(user)
+                .where(or(
+                    eq(user.accessLevel, 1),
+                    eq(user.accessLevel, 0)
+                ));
+            return response;
+        } else {
+            const response = await db
+                .select({ name: user.fullName, points: user.points, level: user.accessLevel })
+                .from(user)
+                .where(
+                    eq(user.accessLevel, 1)
+                );
+            return response;
+        }
+    })
 
 export const Route = createFileRoute('/_protected/home')({
     beforeLoad: requireAccess(0),
@@ -12,6 +41,11 @@ export const Route = createFileRoute('/_protected/home')({
 function RouteComponent() {
     const { user } = Route.useRouteContext();
     const router = useRouter();
+
+    const points = useQuery({
+        queryKey: ['points'],
+        queryFn: getPoints
+    })
 
     const handleLogout = async () => {
         await authClient.signOut({
@@ -43,8 +77,13 @@ function RouteComponent() {
                 <a href="/points">points</a><br></br>
                 <a href="/sudo">sudo</a><br></br>
                 <a href="/trueLogs">trueLogs</a><br></br>
+                <a href="/leaderboard">trueLogs</a><br></br>
                 <a href="/users">users</a>
 
+            </div>
+
+            <div>
+                {JSON.stringify(points.data)}
             </div>
 
             <button

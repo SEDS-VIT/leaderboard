@@ -12,7 +12,7 @@ const changePoints = createServerFn({ method: 'POST' })
         const session = await getSession()
         const [targetLevel] = await db.select({ level: user.accessLevel }).from(user).where(eq(user.id, data.userId))
         if ((targetLevel?.level ?? 5) < (session?.user.accessLevel ?? 0)) {
-            db.insert(pointLog).values({ fromUser: session?.user.id, toUser: data.userId, reason: data.reason, details: data.description, points: data.points, verified: false })
+            db.insert(pointLog).values({ fromUser: session?.user.id, toUser: data.userId, reason: data.reason, details: data.description, points: data.points, verified: null })
         }
     })
 
@@ -41,7 +41,7 @@ export const Route = createFileRoute('/_protected/points')({
     component: RouteComponent,
 })
 
-//TODO: Add/remove points
+//TODO: Add/remove points frontend
 function RouteComponent() {
     const queryClient = useQueryClient()
     const reasons = useQuery({

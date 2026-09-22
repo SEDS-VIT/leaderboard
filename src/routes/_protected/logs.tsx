@@ -18,7 +18,7 @@ export const Route = createFileRoute('/_protected/logs')({
     component: RouteComponent
 })
 
-//TODO: show user point log
+//TODO: show user point log frontend
 function RouteComponent() {
     const logs = useQuery({
         queryKey: ['logs'],

@@ -14,12 +14,12 @@ import { Route as ProtectedRouteImport } from './routes/_protected'
 import { Route as BannedRouteImport } from './routes/banned'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as ProtectedHomeRouteImport } from './routes/_protected/home'
+import { Route as ProtectedHrDashboardRouteImport } from './routes/_protected/hrDashboard'
 import { Route as ProtectedLogsRouteImport } from './routes/_protected/logs'
 import { Route as ProtectedPointVerifyRouteImport } from './routes/_protected/pointVerify'
 import { Route as ProtectedPointsRouteImport } from './routes/_protected/points'
 import { Route as ProtectedSudoRouteImport } from './routes/_protected/sudo'
 import { Route as ProtectedTrueLogsRouteImport } from './routes/_protected/trueLogs'
-import { Route as ProtectedUsersRouteImport } from './routes/_protected/users'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const IndexRoute = IndexRouteImport.update({
@@ -44,6 +44,11 @@ const ProfileRoute = ProfileRouteImport.update({
 const ProtectedHomeRoute = ProtectedHomeRouteImport.update({
   id: '/home',
   path: '/home',
+  getParentRoute: () => ProtectedRoute,
+} as any)
+const ProtectedHrDashboardRoute = ProtectedHrDashboardRouteImport.update({
+  id: '/hrDashboard',
+  path: '/hrDashboard',
   getParentRoute: () => ProtectedRoute,
 } as any)
 const ProtectedLogsRoute = ProtectedLogsRouteImport.update({
@@ -71,11 +76,6 @@ const ProtectedTrueLogsRoute = ProtectedTrueLogsRouteImport.update({
   path: '/trueLogs',
   getParentRoute: () => ProtectedRoute,
 } as any)
-const ProtectedUsersRoute = ProtectedUsersRouteImport.update({
-  id: '/users',
-  path: '/users',
-  getParentRoute: () => ProtectedRoute,
-} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -87,12 +87,12 @@ export interface FileRoutesByFullPath {
   '/banned': typeof BannedRoute
   '/profile': typeof ProfileRoute
   '/home': typeof ProtectedHomeRoute
+  '/hrDashboard': typeof ProtectedHrDashboardRoute
   '/logs': typeof ProtectedLogsRoute
   '/pointVerify': typeof ProtectedPointVerifyRoute
   '/points': typeof ProtectedPointsRoute
   '/sudo': typeof ProtectedSudoRoute
   '/trueLogs': typeof ProtectedTrueLogsRoute
-  '/users': typeof ProtectedUsersRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
@@ -100,12 +100,12 @@ export interface FileRoutesByTo {
   '/banned': typeof BannedRoute
   '/profile': typeof ProfileRoute
   '/home': typeof ProtectedHomeRoute
+  '/hrDashboard': typeof ProtectedHrDashboardRoute
   '/logs': typeof ProtectedLogsRoute
   '/pointVerify': typeof ProtectedPointVerifyRoute
   '/points': typeof ProtectedPointsRoute
   '/sudo': typeof ProtectedSudoRoute
   '/trueLogs': typeof ProtectedTrueLogsRoute
-  '/users': typeof ProtectedUsersRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
@@ -115,12 +115,12 @@ export interface FileRoutesById {
   '/banned': typeof BannedRoute
   '/profile': typeof ProfileRoute
   '/_protected/home': typeof ProtectedHomeRoute
+  '/_protected/hrDashboard': typeof ProtectedHrDashboardRoute
   '/_protected/logs': typeof ProtectedLogsRoute
   '/_protected/pointVerify': typeof ProtectedPointVerifyRoute
   '/_protected/points': typeof ProtectedPointsRoute
   '/_protected/sudo': typeof ProtectedSudoRoute
   '/_protected/trueLogs': typeof ProtectedTrueLogsRoute
-  '/_protected/users': typeof ProtectedUsersRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
@@ -130,12 +130,12 @@ export interface FileRouteTypes {
     | '/banned'
     | '/profile'
     | '/home'
+    | '/hrDashboard'
     | '/logs'
     | '/pointVerify'
     | '/points'
     | '/sudo'
     | '/trueLogs'
-    | '/users'
     | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -143,12 +143,12 @@ export interface FileRouteTypes {
     | '/banned'
     | '/profile'
     | '/home'
+    | '/hrDashboard'
     | '/logs'
     | '/pointVerify'
     | '/points'
     | '/sudo'
     | '/trueLogs'
-    | '/users'
     | '/api/auth/$'
   id:
     | '__root__'
@@ -157,12 +157,12 @@ export interface FileRouteTypes {
     | '/banned'
     | '/profile'
     | '/_protected/home'
+    | '/_protected/hrDashboard'
     | '/_protected/logs'
     | '/_protected/pointVerify'
     | '/_protected/points'
     | '/_protected/sudo'
     | '/_protected/trueLogs'
-    | '/_protected/users'
     | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
@@ -211,6 +211,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedHomeRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/_protected/hrDashboard': {
+      id: '/_protected/hrDashboard'
+      path: '/hrDashboard'
+      fullPath: '/hrDashboard'
+      preLoaderRoute: typeof ProtectedHrDashboardRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
     '/_protected/logs': {
       id: '/_protected/logs'
       path: '/logs'
@@ -246,13 +253,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedTrueLogsRouteImport
       parentRoute: typeof ProtectedRoute
     }
-    '/_protected/users': {
-      id: '/_protected/users'
-      path: '/users'
-      fullPath: '/users'
-      preLoaderRoute: typeof ProtectedUsersRouteImport
-      parentRoute: typeof ProtectedRoute
-    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -265,22 +265,22 @@ declare module '@tanstack/react-router' {
 
 interface ProtectedRouteChildren {
   ProtectedHomeRoute: typeof ProtectedHomeRoute
+  ProtectedHrDashboardRoute: typeof ProtectedHrDashboardRoute
   ProtectedLogsRoute: typeof ProtectedLogsRoute
   ProtectedPointVerifyRoute: typeof ProtectedPointVerifyRoute
   ProtectedPointsRoute: typeof ProtectedPointsRoute
   ProtectedSudoRoute: typeof ProtectedSudoRoute
   ProtectedTrueLogsRoute: typeof ProtectedTrueLogsRoute
-  ProtectedUsersRoute: typeof ProtectedUsersRoute
 }
 
 const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedHomeRoute: ProtectedHomeRoute,
+  ProtectedHrDashboardRoute: ProtectedHrDashboardRoute,
   ProtectedLogsRoute: ProtectedLogsRoute,
   ProtectedPointVerifyRoute: ProtectedPointVerifyRoute,
   ProtectedPointsRoute: ProtectedPointsRoute,
   ProtectedSudoRoute: ProtectedSudoRoute,
   ProtectedTrueLogsRoute: ProtectedTrueLogsRoute,
-  ProtectedUsersRoute: ProtectedUsersRoute,
 }
 
 const ProtectedRouteWithChildren = ProtectedRoute._addFileChildren(

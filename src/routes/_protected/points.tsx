@@ -1,5 +1,5 @@
 import { db } from '#/db'
-import { pointLog, reason, user } from '#/db/schema'
+import { domain, pointLog, reason, user } from '#/db/schema'
 import { requireAccess, getSession } from '#/lib/auth.functions'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
@@ -27,7 +27,7 @@ export type ChangePointsResult =
     | { ok: false; error: string }
 
 const changePoints = createServerFn({ method: 'POST' })
-    .validator((data: { userId: string, reason: string, description: string, points: number }) => data)
+    .validator((data: { userId: string, reason: string, description: string, points: number, domain: string }) => data)
     .handler(async ({ data }): Promise<ChangePointsResult> => {
         try {
             const session = await getSession()
@@ -49,6 +49,7 @@ const changePoints = createServerFn({ method: 'POST' })
                 reason: data.reason,
                 details: data.description,
                 points: data.points,
+                domain: data.domain,
                 verified: immediate ? true : null,
             })
             if (immediate) {
@@ -65,6 +66,12 @@ const changePoints = createServerFn({ method: 'POST' })
 const getReason = createServerFn({ method: 'GET' })
     .handler(async () => {
         const result = await db.select({ reason: reason.reason, points: reason.points }).from(reason).orderBy(asc(reason.reason));
+        return result;
+    })
+
+const getDomain = createServerFn({ method: 'GET' })
+    .handler(async () => {
+        const result = await db.select({ domain: domain.name }).from(domain).orderBy(asc(domain.name));
         return result;
     })
 
@@ -101,11 +108,13 @@ function RouteComponent() {
     const actorLevel = me.accessLevel ?? 1
 
     const reasons = useQuery({ queryKey: ['reasons'], queryFn: getReason })
+    const domains = useQuery({ queryKey: ['domains'], queryFn: getDomain })
     const members = useQuery({ queryKey: ['grantMembers'], queryFn: getMembers })
 
     const [action, setAction] = useState<'add' | 'dock'>('add')
     const [memberId, setMemberId] = useState<string | null>(null)
     const [reasonValue, setReasonValue] = useState<string | null>(null)
+    const [domainValue, setDomainValue] = useState<string | null>(null)
     const [customReason, setCustomReason] = useState('')
     const [pointsInput, setPointsInput] = useState('')
     const [details, setDetails] = useState('')
@@ -130,6 +139,7 @@ function RouteComponent() {
             setCustomReason('')
             setPointsInput('')
             setDetails('')
+            setDomainValue("")
             setAction('add')
             queryClient.invalidateQueries({ queryKey: ['leaderboard'] })
             queryClient.invalidateQueries({ queryKey: ['grantMembers'] })
@@ -172,6 +182,7 @@ function RouteComponent() {
                     reason: isOther ? `Other: ${customReason.trim()}` : reasonValue,
                     description: details.trim() || (isOther ? customReason.trim() : ''),
                     points: signedPoints,
+                    domain: ( domainValue ?? 'Misc' ),
                 },
             },
             { onSettled: () => setSubmitting(false) },
@@ -294,6 +305,23 @@ function RouteComponent() {
                                     placeholder="Any extra context for the verifier…"
                                     rows={3}
                                 />
+                            </div>
+
+                            <div className="flex flex-col gap-2">
+                                <Label htmlFor="domain">Domain</Label>
+                                <Select value={domainValue} onValueChange={(v) => setDomainValue(v as string | null)}>
+                                    <SelectTrigger className="w-full" id="reason">
+                                        <SelectValue placeholder="Select a domain" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {domains.isLoading && <SelectItem value="__loading" disabled>Loading…</SelectItem>}
+                                        {(domains.data ?? []).map((d) => (
+                                            <SelectItem key={d.domain} value={d.domain}>
+                                                {d.domain}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
 
                             <div className="flex items-center justify-between rounded-lg bg-muted px-3 py-2.5 text-sm">

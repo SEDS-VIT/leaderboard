@@ -1,5 +1,5 @@
 import { db } from '#/db';
-import { reason, user } from '#/db/schema';
+import { domain, pointLog, reason, user } from '#/db/schema';
 import { getSession, requireAccess } from '#/lib/auth.functions'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router'
@@ -7,7 +7,7 @@ import { createServerFn } from '@tanstack/react-start';
 import { asc, eq } from 'drizzle-orm';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Ban, ChevronsUp, Pencil, Plus, Search, Trash2, Users } from 'lucide-react';
+import { Ban, ChevronsUp, Globe, Pencil, Plus, Search, Trash2, Users } from 'lucide-react';
 import { initials, roleLabel, ROLE_OPTIONS } from '@/lib/roles';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -43,6 +43,7 @@ export type UpdateUserDataInput = {
 };
 
 export type AdminReason = { id: string; reason: string; points: number }
+export type AdminDomain = { name: string }
 
 type MutResult = { ok: true } | { ok: false; error: string }
 
@@ -100,7 +101,6 @@ const promoteJuniorCore = createServerFn({ method: 'POST' })
             const session = await getSession()
             if ((session?.user.accessLevel ?? 0) < 3) return { ok: false, error: 'Not authorized.' }
 
-            // Only JC -> SC is automated; SC -> Board, HR and Chair stay manual.
             const jcToSc = await db
                 .update(user)
                 .set({ accessLevel: 1, updatedAt: new Date() })
@@ -160,6 +160,56 @@ const deleteReason = createServerFn({ method: 'POST' })
         }
     })
 
+const getAdminDomains = createServerFn({ method: 'GET' })
+    .handler(async (): Promise<AdminDomain[]> => {
+        const session = await getSession()
+        if ((session?.user.accessLevel ?? 0) < 3) return []
+        return await db.select({ name: domain.name }).from(domain).orderBy(asc(domain.name))
+    })
+
+const createDomain = createServerFn({ method: 'POST' })
+    .validator((data: { name: string }) => data)
+    .handler(async ({ data }): Promise<MutResult> => {
+        try {
+            const session = await getSession()
+            if ((session?.user.accessLevel ?? 0) < 3) return { ok: false, error: 'Not authorized.' }
+            if (!data.name.trim()) return { ok: false, error: 'Domain name is required.' }
+            await db.insert(domain).values({ name: data.name.trim() })
+            return { ok: true }
+        } catch {
+            return { ok: false, error: 'Failed to create the domain. It may already exist.' }
+        }
+    })
+
+const updateDomain = createServerFn({ method: 'POST' })
+    .validator((data: { oldName: string; newName: string }) => data)
+    .handler(async ({ data }): Promise<MutResult> => {
+        try {
+            const session = await getSession()
+            if ((session?.user.accessLevel ?? 0) < 3) return { ok: false, error: 'Not authorized.' }
+            const newNameTrimmed = data.newName.trim();
+            if (!newNameTrimmed) return { ok: false, error: 'New domain name is required.' }
+
+            // Wrap the workaround in a transaction to prevent orphaned data if a step fails
+            await db.transaction(async (tx) => {
+                // 1. Create the new domain
+                await tx.insert(domain).values({ name: newNameTrimmed })
+
+                // 2. Re-link all point logs from the old domain to the new one
+                await tx.update(pointLog)
+                    .set({ domain: newNameTrimmed })
+                    .where(eq(pointLog.domain, data.oldName))
+
+                // 3. Delete the old domain
+                await tx.delete(domain)
+                    .where(eq(domain.name, data.oldName))
+            });
+            return { ok: true }
+        } catch {
+            return { ok: false, error: 'Failed to update the domain.' }
+        }
+    })
+
 export const Route = createFileRoute('/_protected/hrDashboard')({
     beforeLoad: requireAccess(3),
     component: RouteComponent,
@@ -181,7 +231,6 @@ function EditUserDialog({
     const [banned, setBanned] = useState(false)
     const [loadedId, setLoadedId] = useState<string | null>(null)
 
-    // Sync form when a new target is opened
     if (target && open && loadedId !== target.id) {
         setLoadedId(target.id)
         setFullName(target.fullName ?? '')
@@ -432,6 +481,152 @@ function UsersTab() {
     )
 }
 
+function DomainsTab() {
+    const queryClient = useQueryClient()
+    const domains = useQuery({ queryKey: ['adminDomains'], queryFn: getAdminDomains })
+    const [newDomain, setNewDomain] = useState('')
+    const [editing, setEditing] = useState<AdminDomain | null>(null)
+    const [editOpen, setEditOpen] = useState(false)
+    const [editName, setEditName] = useState('')
+
+    const invalidate = () => {
+        queryClient.invalidateQueries({ queryKey: ['adminDomains'] })
+        queryClient.invalidateQueries({ queryKey: ['domains'] })
+    }
+
+    const createMut = useMutation({
+        mutationFn: createDomain,
+        onSuccess: (result) => {
+            if (!result.ok) return toast.error(result.error)
+            toast.success('Domain added')
+            setNewDomain('')
+            invalidate()
+        },
+        onError: () => toast.error('Failed to add the domain.'),
+    })
+
+    const updateMut = useMutation({
+        mutationFn: updateDomain,
+        onSuccess: (result) => {
+            if (!result.ok) return toast.error(result.error)
+            toast.success('Domain updated')
+            setEditOpen(false)
+            invalidate()
+        },
+        onError: () => toast.error('Failed to update the domain.'),
+    })
+
+    const handleCreate = (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!newDomain.trim()) {
+            toast.error('Enter a domain name.')
+            return
+        }
+        createMut.mutate({ data: { name: newDomain } })
+    }
+
+    return (
+        <>
+            <form onSubmit={handleCreate} className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                <div className="flex flex-1 flex-col gap-2">
+                    <Label htmlFor="new-domain">New domain</Label>
+                    <Input
+                        id="new-domain"
+                        value={newDomain}
+                        onChange={(e) => setNewDomain(e.target.value)}
+                        placeholder="e.g. Web Development"
+                    />
+                </div>
+                <Button type="submit" disabled={createMut.isPending} className="sm:w-auto">
+                    <Plus />
+                    Add domain
+                </Button>
+            </form>
+
+            {domains.isLoading ? (
+                <div className="flex flex-col gap-3">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                        <Skeleton key={i} className="h-10 w-full" />
+                    ))}
+                </div>
+            ) : (
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Domain Name</TableHead>
+                            <TableHead />
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {(domains.data ?? []).map((d) => (
+                            <TableRow key={d.name}>
+                                <TableCell className="font-medium">{d.name}</TableCell>
+                                <TableCell className="text-right">
+                                    <div className="flex justify-end gap-1.5">
+                                        <Button
+                                            size="xs"
+                                            variant="outline"
+                                            onClick={() => {
+                                                setEditing(d)
+                                                setEditName(d.name)
+                                                setEditOpen(true)
+                                            }}
+                                        >
+                                            <Pencil className="size-3" />
+                                            Edit
+                                        </Button>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                        {(domains.data ?? []).length === 0 && (
+                            <TableRow>
+                                <TableCell colSpan={2} className="h-24 text-center text-muted-foreground">
+                                    No domains defined yet.
+                                </TableCell>
+                            </TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+            )}
+
+            <Dialog open={editOpen} onOpenChange={setEditOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Edit domain</DialogTitle>
+                        <DialogDescription>Note: Renaming may affect linked users/teams.</DialogDescription>
+                    </DialogHeader>
+                    <form
+                        className="flex flex-col gap-4"
+                        onSubmit={(e) => {
+                            e.preventDefault()
+                            if (!editing || !editName.trim()) return
+                            updateMut.mutate({ data: { oldName: editing.name, newName: editName } })
+                        }}
+                    >
+                        <div className="flex flex-col gap-2">
+                            <Label htmlFor="edit-domain">Domain Name</Label>
+                            <Input
+                                id="edit-domain"
+                                value={editName}
+                                onChange={(e) => setEditName(e.target.value)}
+                            />
+                        </div>
+                        <DialogFooter>
+                            <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
+                                Cancel
+                            </Button>
+                            <Button type="submit" disabled={updateMut.isPending}>
+                                Save
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+        </>
+    )
+}
+
 function ReasonsTab() {
     const queryClient = useQueryClient()
     const reasons = useQuery({ queryKey: ['adminReasons'], queryFn: getAdminReasons })
@@ -626,7 +821,7 @@ function RouteComponent() {
             <div className="flex flex-col gap-1">
                 <h1 className="font-heading text-2xl font-semibold tracking-tight">Manage</h1>
                 <p className="text-sm text-muted-foreground">
-                    User roles, bans, and the default list of point reasons.
+                    User roles, bans, point reasons, and chapter domains.
                 </p>
             </div>
 
@@ -639,6 +834,10 @@ function RouteComponent() {
                     <TabsTrigger value="reasons">
                         <Plus />
                         Reasons
+                    </TabsTrigger>
+                    <TabsTrigger value="domains">
+                        <Globe />
+                        Domains
                     </TabsTrigger>
                 </TabsList>
                 <TabsContent value="users">
@@ -664,6 +863,19 @@ function RouteComponent() {
                         </CardHeader>
                         <CardContent className="flex flex-col gap-4">
                             <ReasonsTab />
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+                <TabsContent value="domains">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Domains</CardTitle>
+                            <CardDescription>
+                                Add and rename core chapter domains.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex flex-col gap-4">
+                            <DomainsTab />
                         </CardContent>
                     </Card>
                 </TabsContent>

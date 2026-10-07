@@ -43,6 +43,7 @@ const getTrueLogs = createServerFn({ method: 'GET' })
                 details: pointLog.details,
                 points: pointLog.points,
                 verified: pointLog.verified,
+                domain: pointLog.domain,
                 recipient: recipient.fullName,
                 recipientRegNo: recipient.registrationNumber,
                 initiator: initiator.fullName,
@@ -153,6 +154,7 @@ function RouteComponent() {
                                     <TableHead>Details</TableHead>
                                     <TableHead className="text-right">Points</TableHead>
                                     <TableHead>Status</TableHead>
+                                    <TableHead>Domain</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -185,6 +187,7 @@ function RouteComponent() {
                                             {formatPoints(entry.points)}
                                         </TableCell>
                                         <TableCell><StatusBadge verified={entry.verified} /></TableCell>
+                                        <TableCell className="font-medium">{entry.domain}</TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>

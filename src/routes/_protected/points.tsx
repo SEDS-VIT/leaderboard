@@ -182,7 +182,7 @@ function RouteComponent() {
                     reason: isOther ? `Other: ${customReason.trim()}` : reasonValue,
                     description: details.trim() || (isOther ? customReason.trim() : ''),
                     points: signedPoints,
-                    domain: ( domainValue ?? 'Misc' ),
+                    domain: ( domainValue ?? 'Miscellaneous' ),
                 },
             },
             { onSettled: () => setSubmitting(false) },

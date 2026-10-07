@@ -3,7 +3,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { createServerFn } from '@tanstack/react-start';
 import { getSession, requireAccess } from '#/lib/auth.functions';
-import { pointLog } from '#/db/schema';
+import { domain, pointLog } from '#/db/schema';
 import { desc, eq } from 'drizzle-orm';
 import { Clock, EyeOff, Info } from 'lucide-react';
 import { formatPoints } from '@/lib/roles';
@@ -32,6 +32,7 @@ const getLogs = createServerFn({ method: 'GET' })
                 points: pointLog.points,
                 details: pointLog.details,
                 verified: pointLog.verified,
+                domain: pointLog.domain
             })
             .from(pointLog)
             .where(eq(pointLog.toUser, session.user.id))
@@ -119,6 +120,7 @@ function RouteComponent() {
                                     <TableHead>Details</TableHead>
                                     <TableHead className="text-right">Points</TableHead>
                                     <TableHead>Status</TableHead>
+                                    <TableHead>Domain</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -140,6 +142,7 @@ function RouteComponent() {
                                             {formatPoints(entry.points)}
                                         </TableCell>
                                         <TableCell><StatusBadge verified={entry.verified} /></TableCell>
+                                        <TableCell className="font-medium">{entry.domain}</TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>

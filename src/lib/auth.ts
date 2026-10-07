@@ -18,6 +18,15 @@ export const auth = betterAuth({
             // hd: "vitstudent.ac.in"
         },
     },
+    session: {
+        // Serve getSession from a signed cookie for up to 5 minutes instead of
+        // hitting Turso on every call. DB is consulted once per maxAge window.
+        // Trade-off: isBanned/accessLevel changes take effect within maxAge.
+        cookieCache: {
+            enabled: true,
+            maxAge: 5 * 60,
+        },
+    },
     user: {
         // Intercept the user login/registration to enforce your custom logic
         validateUserInfo: ({ user, source }) => {

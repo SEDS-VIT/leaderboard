@@ -1,6 +1,10 @@
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 import {v7 as uuidv7} from "uuid"
 
+export const domain = sqliteTable("domain", {
+    name: text("domain").primaryKey().default("")
+})
+
 export const reason = sqliteTable("reason", {
     id: text("id").primaryKey().$defaultFn(() => uuidv7()),
     reason: text("reason").default("").notNull(),
@@ -21,7 +25,8 @@ export const pointLog = sqliteTable("point_log", {
     reason: text("reason").notNull().default("adjustment"),
     details: text("details").default(""),
     verified: integer("verified", {mode: "boolean"}).default(false),
-    points: integer("points").default(0).notNull()
+    points: integer("points").default(0).notNull(),
+    domain: text("domain").references(() => domain.name).default("")
 })
 
 export const user = sqliteTable("user", {
